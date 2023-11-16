@@ -2,6 +2,13 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
+# Set the page configuration
+st.set_page_config(
+    page_title="Your App Title",
+    page_icon="https://irisgalerie.com/cdn/shop/articles/629accd8e699b00bbf1ebdd7_TE_CC_81MOIGNAGES_201_20_1_-min.jpg?v=1655289134",
+    layout="wide",  # You can choose "wide" or "centered"
+    initial_sidebar_state="auto"  # You can choose "auto", "expanded", or "collapsed"
+)
 
 # Function to plot revenue
 def plot_revenue(data, group_by_column):
@@ -44,10 +51,10 @@ def plot_evolution(data_grouped, dimension, selected_countries, selected_stores,
 
     if dimension == 'Country':
         for country in selected_countries:
-            fig.add_trace(go.Scatter(x=data_pivot.index, y=data_pivot[country], mode='lines', name=country))
+            fig.add_trace(go.Scatter(x=data_pivot.index, y=data_pivot[country], mode='lines+markers', name=country))
     elif dimension == 'Store':
         for store in selected_stores:
-            fig.add_trace(go.Scatter(x=data_pivot.index, y=data_pivot[store], mode='lines', name=store))
+            fig.add_trace(go.Scatter(x=data_pivot.index, y=data_pivot[store], mode='lines+markers', name=store))
 
     if dimension == 'Country':
         fig.update_layout(title=f'{metric} by {dimension} (Evolution)', xaxis_title=x_axis,
@@ -55,6 +62,14 @@ def plot_evolution(data_grouped, dimension, selected_countries, selected_stores,
     elif dimension == 'Store':
         fig.update_layout(title=f'{metric} by {dimension} (Evolution)', xaxis_title=x_axis,
                           yaxis_title=metric)
+
+    fig.update_layout(
+        title=f'{metric} by {dimension} (Evolution)',
+        xaxis_title=x_axis,
+        yaxis_title=metric,
+        height=1000,  # Adjust the height as needed
+        width=2000  # Adjust the width as needed
+    )
 
     st.plotly_chart(fig)
 
@@ -78,7 +93,7 @@ def plot_year_to_year(data_grouped, dimension, selected_countries, selected_stor
 
     data_table = pd.DataFrame()
 
-    if selected_countries:
+    if selected_countries and dimension == 'Country':
         data_grouped_country = data_grouped[data_grouped['Country'].isin(selected_countries)].copy()
         data_pivot_country = data_grouped_country.pivot_table(index=x_axis_column, columns=['Country', 'Year'],
                                                               values=metric, aggfunc='sum')
@@ -89,7 +104,7 @@ def plot_year_to_year(data_grouped, dimension, selected_countries, selected_stor
                     data_table_country[f'{country}-{year}'] = data_pivot_country[(country, year)].values
         data_table = pd.concat([data_table, data_table_country], axis=1)
 
-    if selected_stores:
+    if selected_stores and dimension == 'Store':
         data_grouped_store = data_grouped[data_grouped['Store'].isin(selected_stores)].copy()
         data_pivot_store = data_grouped_store.pivot_table(index=x_axis_column, columns=['Store', 'Year'],
                                                           values=metric, aggfunc='sum')
@@ -103,26 +118,37 @@ def plot_year_to_year(data_grouped, dimension, selected_countries, selected_stor
     # Now let's generate the chart based on the selected data
     fig = go.Figure()
 
-    if selected_countries:
+    if selected_countries and dimension == 'Country':
         for country in selected_countries:
             for year in data_grouped_country['Year'].unique():
                 if (country, year) in data_pivot_country.columns:
                     fig.add_trace(
-                        go.Scatter(x=data_pivot_country.index, y=data_pivot_country[(country, year)], mode='lines',
+                        go.Scatter(x=data_pivot_country.index, y=data_pivot_country[(country, year)],
+                                   mode='lines+markers',
                                    name=f'{country}-{year}'))
 
-    if selected_stores:
+    if selected_stores and dimension == 'Store':
         for store in selected_stores:
             for year in data_grouped_store['Year'].unique():
                 if (store, year) in data_pivot_store.columns:
-                    fig.add_trace(go.Scatter(x=data_pivot_store.index, y=data_pivot_store[(store, year)], mode='lines',
-                                             name=f'{store}-{year}'))
+                    fig.add_trace(
+                        go.Scatter(x=data_pivot_store.index, y=data_pivot_store[(store, year)], mode='lines+markers',
+                                   name=f'{store}-{year}'))
 
     fig.update_layout(title=f'{metric} by {dimension} (Year-to-Year)', xaxis_title=x_axis, yaxis_title=metric)
 
     # Display the data table in the same format as the Evolution data table
     st.header("Data Table (Year-to-Year)")
     st.dataframe(data_table.transpose())
+
+    # Update layout to make the chart bigger
+    fig.update_layout(
+        title=f'{metric} by {dimension} (Year-to-Year)',
+        xaxis_title=x_axis,
+        yaxis_title=metric,
+        height=1000,  # Adjust the height as needed
+        width=2000  # Adjust the width as needed
+    )
 
     st.plotly_chart(fig)
 
